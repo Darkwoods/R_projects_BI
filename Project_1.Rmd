@@ -11,12 +11,10 @@ output:
 
 # Объявление пакетов
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 library(ggplot2)
-library(tidyr)
 library(dplyr)
 library(readr)
-library(cowplot)
 library(knitr)
 ```
 
@@ -31,54 +29,53 @@ extracting_data <- function(path=getwd(), pattern="*.csv"){
   files <- list.files(path, pattern, full.names = TRUE)
   do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFactors = TRUE)))
 }
-data <- extracting_data()
-str(data)
+shellfish <- extracting_data()
+str(shellfish)
 ```
 
-Видим, что тип некоторых переменных не соответствуют типу данных, которые в них содержатся. Посмотрим, почему так могло случиться.
+Видим, что тип некоторых переменных не соответствуют типу данных, которые в них содержатся. Посмотрим, почему так могло случиться. В переменной Длина предполагается слишком много значений фактора, поэтому выведем уникальные значения други способом
 
 ```{r}
-table(data$Rings)
-table(data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.')
-table(data$Length)
+table(shellfish$Rings)
+table(shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.')
+levels(as.factor(shellfish$Length))
 ```
 
 # Преобразование данных
 
-Некоторые измерения, записанные в некорректном виде, можно заменить на соответствующие им числовые значения, таким образом, сделав переменную числовой или факторной. Так можно сделать с переменными, соответствующими количеству колец и полу моллюсков. В переменной "Length" отсутствует измерение, так что надо привести запись в унифицированный вид "NA". Помимо этого, для удобства лучше заменить название переменной пола, чтобы не перегружать шапку.
+Некоторые измерения, записанные в некорректном виде, можно заменить на соответствующие им числовые значения, таким образом, сделав переменную числовой или факторной. Так можно сделать с переменными, соответствующими количеству колец и полу моллюсков. В переменной "Length" отсутствует измерение, переведем в численный формат все значения переменной для удобства дальнейшей статистической обработки. Помимо этого, для удобства лучше заменить название переменной пола, чтобы не перегружать шапку.
 
-```{r}
-data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'male')] <- 1
-data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'one')] <- 1
-data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(data$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'three')] <- 3
-data$Rings[which(data$Rings == 'nine')] <- 9
-data$Rings <- factor(x = data$Rings)
-names(data) [2] <- 'Sex'
-data$Sex <- factor(x = data$Sex, levels = c(1, 2, 3), labels = c('Male', 'Female', 'Juvenil'))
-data$Length <- as.numeric(data$Length)
-str(data)
+```{r, message=FALSE, warning=FALSE}
+shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'male')] <- 1
+shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'one')] <- 1
+shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.'[which(shellfish$'Sex..1.вЂ..male..2.вЂ..female..3.вЂ..uvenil.' == 'three')] <- 3
+shellfish$Rings[which(shellfish$Rings == 'nine')] <- 9
+shellfish$Rings <- factor(x = shellfish$Rings)
+names(shellfish) [2] <- 'Sex'
+shellfish$Sex <- factor(x = shellfish$Sex, levels = c(1, 2, 3), labels = c('Male', 'Female', 'Juvenil'))
+shellfish$Length <- as.numeric(shellfish$Length)
+str(shellfish)
 
 ```
 
 # Работа с пропущенными значениями
 
-Проверяем, сколько значений NA в наших данных и какой процент строк с NA занимают во всем датафрейме.
+Проверяем, сколько значений NA в наших данных и какие это строки.
 
 ```{r}
-sum(is.na(data))
-mean(!complete.cases(data))
+shellfish[!complete.cases(shellfish),]
 ```
 
 Т.к. строк немного, а данных много, то целесообразнее удалить строки, содержащие пропущенные значения. Также существует подход, в котором пропущенные значения заменяются на подходящие расчетные значения. Мы не используем этот подход, потому что количество пропусков не критично велико.
 
 ```{r}
-data_without_na <- na.omit(data)
+shellfish_without_na <- na.omit(shellfish)
 ```
 
 Посмотрим на получившиеся данные:
 
 ```{r}
-summary(data_without_na)
+summary(shellfish_without_na)
 ```
 
 # Рассчет среднего и стандартного отклонения длины моллюсков разного пола
@@ -86,7 +83,7 @@ summary(data_without_na)
 Теперь рассчитаем среднее значение и стандартное отклонение переменной Length для моллюсков разного пола.
 
 ```{r}
-data_without_na %>% group_by(Sex) %>% summarise(mean_L = mean(Length), sd_L = sd(Length))
+shellfish_without_na %>% group_by(Sex) %>% summarise(mean_L = mean(Length), sd_L = sd(Length))
 ```
 
 # Рассчет процента моллюсков определенной высоты
@@ -94,7 +91,7 @@ data_without_na %>% group_by(Sex) %>% summarise(mean_L = mean(Length), sd_L = sd
 Рассчитаем процент моллюсков, у которых значение переменной Height не превышает 0.165:
 
 ```{r}
-length(data_without_na$Height[data_without_na$Height <= 0.165])/length(data_without_na$Height)*100
+length(shellfish_without_na$Height[shellfish_without_na$Height <= 0.165])/length(shellfish_without_na$Height)*100
 ```
 
 # Вывод значений длины больше 92% всех наблюдений
@@ -102,13 +99,13 @@ length(data_without_na$Height[data_without_na$Height <= 0.165])/length(data_with
 Посмотрим на значения переменной Length, которое выше чем у 92% от всех наблюдений:
 
 ```{r}
-data_without_na$Length[data_without_na$Length > quantile(data_without_na$Length, 0.93)]
+shellfish_without_na$Length[shellfish_without_na$Length > quantile(shellfish_without_na$Length, 0.93)]
 ```
 
 # Стандартизация длины моллюсков
 
 ```{r}
-data_without_na$Lenght_z_scores <- scale(data_without_na$Length)
+shellfish_without_na$Lenght_z_scores <- scale(shellfish_without_na$Length)
 ```
 
 # Сравнение диаметра моллюсков с 5 и 15 кольцами
@@ -116,50 +113,46 @@ data_without_na$Lenght_z_scores <- scale(data_without_na$Length)
 Сравним диаметр моллюсков с числом колец 5 и 15. Оформим результаты графически.
 
 ```{r}
-q_5_15 <- data_without_na %>% 
+q_5_15 <- shellfish_without_na %>% 
   filter(Rings == 5 | Rings == 15)
-ggplot(q_5_15, aes(Rings, Diameter))+
+ggplot(q_5_15, aes(Rings, Diameter, fill = Rings))+
   geom_boxplot()+
-  theme_bw()
+  scale_color_brewer(palette = 'Set1')
 ```
 
 Судя по графику в среднем диаметр моллюсков с 5 кольцами меньше диаметра моллюсков с 15 кольцами. Проверим статистическую значимость полученных результатов. Для этого нужно убедиться в нормальности распределения данных. Это проверяется с помощью теста Шипиро-Уилка.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 shapiro.test(q_5_15[q_5_15$Rings == 5, 4])
 shapiro.test(q_5_15[q_5_15$Rings == 15, 4])
 ```
 
-Величина диаметра у моллюсков с 5 кольцами (p-value = `r round(shapiro.test(q_5_15[q_5_15$Rings == 5, 4])$p.value, 2)`) и с 15 кольцами (p-value = `r round(shapiro.test(q_5_15[q_5_15$Rings == 5, 4])$p.value, 2)`) распределена нормально, следовательно, для оценки достоверности различий можно применить тест Стьюдента.
+Величина диаметра у моллюсков с 5 кольцами (p-value = `r round(shapiro.test(q_5_15[q_5_15$Rings == 5, 4])$p.value, 2)`, N = `r length(q_5_15[q_5_15$Rings == 5, 4])`) и с 15 кольцами (p-value = `r round(shapiro.test(q_5_15[q_5_15$Rings == 5, 4])$p.value, 2)`, N = `r length(q_5_15[q_5_15$Rings == 15, 4])`) распределена нормально, следовательно, для оценки достоверности различий можно применить тест Стьюдента.
 
 ```{r}
 ttest <- t.test(q_5_15[q_5_15$Rings == 5, 4], q_5_15[q_5_15$Rings == 15, 4])
 ```
 
-p-value по результатам теста Стьюдента составляет `r round(ttest$p.value, 2)`, а значит, можно сделать вывод, что присутствуют статистически значимые различия между диаметром моллюсков с 5 и 15 кольцами.
+Значение t-статистики составляет `r round(ttest$statistic, 2)`,p-value по результатам теста Стьюдента составляет `r round(ttest$p.value, 2)`, а значит, можно сделать вывод, что присутствуют статистически значимые различия между диаметром моллюсков с 5 и 15 кольцами.
 
 # Поиск возможной взаимосвязи переменных Diameter и Whole_weight
 
-Как и в предыдущем задании построим график для визуализации данных.
+Наличие взаимосвязи можно проверить с помощью корреляционного теста. Выбор корелляционного теста зависит от нормальности распределения исследуемых признаков.
+
+```{r, message=FALSE, warning=FALSE}
+shapiro.test(shellfish_without_na$Diameter)
+shapiro.test(shellfish_without_na$Whole_weight)
+```
+
+Переменные Diameter и Whole_weight распределены не нормально - значения p.value для Диаметра `r round(shapiro.test(shellfish_without_na$Diameter)$p.value, 2)`, N = `r length(shellfish_without_na$Diameter)` и для Веса `r round(shapiro.test(shellfish_without_na$Whole_weight)$p.value, 2)`, N = `r length(shellfish_without_na$Whole_weight)`. Используем коэффициент корреляции Спирмена.
+
+```{r}
+cor <- cor.test(shellfish_without_na$Diameter, shellfish_without_na$Whole_weight, method = "spearman", exact = FALSE)
+```
+
+Уровень корелляции составляет `r round(cor$estimate, 2)`(p-value `r round(cor$p.value, 6)`). Значение коэффициента корреляции довольно велико и, таким образом, можно заключить, что между диаметром и весом моллюска присутствует сильная положительная корреляция. Как и в предыдущем задании построим график для визуализации. ВЗаимосвязь переменных нелинейна.
 
 ```{r message=FALSE, warning=FALSE}
-ggplot(data_without_na, aes(Diameter, Whole_weight)) +
-  geom_point() +
-  geom_smooth()
+ggplot(shellfish_without_na, aes(Diameter, Whole_weight)) +
+  geom_point()
 ```
-
-Первый взгляд на график указывает на наличие корреляции между диаметром и весом моллюсков. Тем не менее это можно проверить и с помощью корреляционного теста. Выбор корелляционного теста зависит от нормальности распределения исследуемых признаков.
-
-```{r}
-shapiro.test(data_without_na$Diameter)
-shapiro.test(data_without_na$Whole_weight)
-```
-
-Переменные Diameter и Whole_weight распределены не нормально - значения p.value для Диаметра `r round(shapiro.test(data_without_na$Diameter)$p.value, 2)` и для Веса `r round(shapiro.test(data_without_na$Whole_weight)$p.value, 2)`. Используем коэффициент корреляции Спирмена.
-
-```{r}
-cor <- cor.test(data_without_na$Diameter, data_without_na$Whole_weight, method = "spearman", exact = FALSE)
-```
-
-Уровень корелляции составляет `r round(cor$estimate, 2)`(p-value `r round(cor$p.value, 6)`). Значение коэффициента корреляции довольно велико и, таким образом, можно заключить, что между диаметром и весом моллюска присутствует сильная положительная корреляция. 
-
